@@ -1,0 +1,21 @@
+.screen {
+    
+}
+
+body {
+    font-family: sans-serif;
+    margin: none;
+    color: black;
+    background: cadetblue;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.quiz {
+    background-color: wheat;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    padding: 2rem;
+}

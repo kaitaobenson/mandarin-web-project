@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="screen" id="quiz-start-screen">
+        <h1>Mandarin Quiz 1</h1>
+        <p>BLah blah description here.</p>
+        <button id="start-button">Start Quiz</button>
+    </div>
+
+    <div class="screen" id="quiz-question-screen">
+        <div class="quiz">
+            <h2 id="question-text">Question goes here</h2>
+            <div class="quiz-info">
+                <div class="card-front">
+                    Front of the flashcard goes here sdf s
+                </div>
+                <div class="card-back">
+                    Back of the flashcard goes here
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<button id="myButton">Click Me!</button>
+<span id="myText">Not Updated</span>
+{% endblock %}
