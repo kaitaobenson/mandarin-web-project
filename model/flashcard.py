@@ -1,77 +1,68 @@
-class Flashcard:
+from dataclasses import asdict, dataclass
+import sqlite3
+from typing import Self
+from model.database import read_db, write_db
 
-    # --- BOILERPLATE CODE ---
-    # Setting variables from dictionary provided by the database
-    
-    def __init__(self, id, deck_id, english, mandarin, pinyin, times_reviewed=0, created_at=None):
-        self.id = id
-        self.deck_id = deck_id
-        self.english = english
-        self.mandarin = mandarin
-        self.pinyin = pinyin
-        self.times_reviewed = times_reviewed
-        self.created_at = created_at
+
+@dataclass
+class Flashcard:
+    id: int
+    deck_id: int
+    english: str
+    mandarin: str
+    pinyin: str
+    times_reviewed: int = 0
+    created_at: str | None = None
 
     @classmethod
-    def from_row(cls, row):
+    def from_row(cls, row: sqlite3.Row | None) -> Self | None:
         if row is None:
             return None
-        return cls(
-            id=row["id"],
-            deck_id=row["deck_id"],
-            english=row["english"],
-            mandarin=row["mandarin"],
-            pinyin=row["pinyin"],
-            times_reviewed=row["times_reviewed"],
-            created_at=row["created_at"]
+        
+        # Unpacks the row directly into Flashcard(...) automatically!
+        return cls(**dict(row))
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    # --- DATABASE METHODS ---
+    def edit_english(self, new_english: str) -> None:
+        self.english = new_english
+
+        write_db(
+            "UPDATE flashcards SET english = ? WHERE id = ?",
+            (self.english, self.id)
+        )
+    
+    def edit_mandarin(self, new_mandarin: str) -> None:
+        self.mandarin = new_mandarin
+        write_db(
+            "UPDATE flashcards SET mandarin = ? WHERE id = ?",
+            (self.mandarin, self.id)
+        )
+    
+    def edit_pinyin(self, new_pinyin: str) -> None:
+        self.pinyin = new_pinyin
+        write_db(
+            "UPDATE flashcards SET pinyin = ? WHERE id = ?",
+            (self.pinyin, self.id)
         )
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "deck_id": self.deck_id,
-            "english": self.english,
-            "mandarin": self.mandarin,
-            "pinyin": self.pinyin,
-            "times_reviewed": self.times_reviewed,
-            "created_at": self.created_at
-        }
-
-
-    # --- UTILITY METHODS FOR THE OBJECT ---
-    def mark_reviewed(self):
-        self.times_reviewed += 1
-        with get_connection() as conn:
-            conn.execute(
-                "UPDATE flashcards SET times_reviewed = ? WHERE id = ?",
-                (self.times_reviewed, self.id)
-            )
-            conn.commit()
-    
-    # --- UTILITY STATIC METHODS ---
     @classmethod
-    def get_by_deck(cls, deck_id):
-        with get_connection() as conn:
-            rows = conn.execute(
-                "SELECT * FROM flashcards WHERE deck_id = ?",
-                (deck_id,)
-            ).fetchall()
-            cards = []
-            for row in rows:
-                cards.append(cls.from_row(row))
-            return cards
+    def get_by_deck(cls, deck_id: int) -> list[Self]:
+        rows = read_db(
+            "SELECT * FROM flashcards WHERE deck_id = ?",
+            (deck_id,),
+            fetch_all=True
+        )
+        return [cls(**row) for row in rows]
 
     @classmethod
-    def create(cls, deck_id, english, mandarin, pinyin):
-        with get_connection() as conn:
-            cursor = conn.execute(
-                """
-                INSERT INTO flashcards (deck_id, english, mandarin, pinyin, times_reviewed)
-                VALUES (?, ?, ?, ?, 0)
-                """,
-                (deck_id, english, mandarin, pinyin)
-            )
-            conn.commit()
-            new_id = cursor.lastrowid
-            row = conn.execute("SELECT * FROM flashcards WHERE id = ?", (new_id,)).fetchone()
-            return cls.from_row(row)
+    def create(cls, deck_id: int, english: str, mandarin: str, pinyin: str) -> Self | None:
+        new_id = write_db(
+            """
+            INSERT INTO flashcards (deck_id, english, mandarin, pinyin)
+            VALUES (?, ?, ?, ?)
+            """,
+            (deck_id, english, mandarin, pinyin)
+        )

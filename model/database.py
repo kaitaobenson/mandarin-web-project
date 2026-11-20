@@ -1,4 +1,6 @@
 import sqlite3
+from contextlib import contextmanager
+from typing import Iterator
 
 DB_LOCALE = "flashcards.db"
 
@@ -10,6 +12,8 @@ def init_db():
 # Write (takes sql command)
 def write_db(command: str, params: tuple = ()):
     with sqlite3.connect(DB_LOCALE) as conn:
+        conn.execute("PRAGMA foreign_keys = ON;")
+
         cursor = conn.cursor()
         cursor.execute(command, params)
         conn.commit()
@@ -22,6 +26,8 @@ def write_db(command: str, params: tuple = ()):
 # ]
 def read_db(command: str, params: tuple = (), fetch_all: bool = True):
     with sqlite3.connect(DB_LOCALE) as conn:
+        conn.execute("PRAGMA foreign_keys = ON;")
+        
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(command, params)
@@ -36,33 +42,19 @@ def read_db(command: str, params: tuple = (), fetch_all: bool = True):
             else:
                 return None
 
+@contextmanager
+def get_connection() -> Iterator[sqlite3.Connection]:
+  conn = sqlite3.connect(DB_LOCALE)
+  # Crucial: allows dict(row) to work in from_row() and get_by_deck()
+  conn.row_factory = sqlite3.Row
+  # Optional but recommended: enforces foreign keys like deck_id
+  
+
+  try:
+    with conn:  # Automatically commits on success, rolls back on exception
+      yield conn
+  finally:
+    conn.close()  # Guarantees the file lock is released
+
 
 # --- WRAP ALL THE SQL COMMANDS ---
-def get_user_by_username(username: str):
-    return read_db(
-        "SELECT * FROM users WHERE username=?",
-        (username,),
-        fetch_all=False
-    )
-
-def get_user_decks(user_id: str):
-    return read_db(
-        "SELECT * FROM flashcard_decks WHERE user_id=? ORDER BY created_at DESC",
-        (user_id,),
-        fetch_all=True
-    )
-
-
-
-
-def get_all_cards():
-    return read_db("SELECT * FROM cards")
-
-def add_card(hanzi: str, py: str, meaning: str = ""):
-    write_db(
-        "INSERT INTO cards (hanzi, pinyin, meaning) VALUES (?, ?, ?)",
-        (hanzi, py, meaning)
-    )
-
-def delete_card(card_id: int):
-    write_db("DELETE FROM cards WHERE id = ?", (card_id,))
